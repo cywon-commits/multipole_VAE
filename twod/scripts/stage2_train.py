@@ -15,6 +15,7 @@ ap.add_argument('--lr', type=float, default=2e-3); ap.add_argument('--beta', typ
 ap.add_argument('--free_bits', type=float, default=0.0); ap.add_argument('--seed', type=int, default=0)
 ap.add_argument('--K1', type=int, default=2); ap.add_argument('--K0', type=int, default=2)
 ap.add_argument('--C', type=int, default=8); ap.add_argument('--out', default='results'); ap.add_argument('--name', default=None)
+ap.add_argument('--jlr_mult', type=float, default=10.0)
 ap.add_argument('--no_mc', action='store_true')
 a = ap.parse_args()
 name = a.name or f"{a.ens}_{a.mode}_b{a.beta}_s{a.seed}"
@@ -32,9 +33,9 @@ else:
 m = SpinVAE(L, a.mode != 'indep', K1=a.K1, K0=a.K0, C=a.C, spur=spur, dmi=dmi, **kw)
 Jp = [p for n_, p in m.named_parameters() if n_ in ('J0', 'D')]
 mp = [p for n_, p in m.named_parameters() if n_ not in ('J0', 'D')]
-groups = [dict(params=mp, lr=a.lr)] + ([dict(params=Jp, lr=10*a.lr)] if a.mode == 'pl' else [])
+groups = [dict(params=mp, lr=a.lr)] + ([dict(params=Jp, lr=a.jlr_mult*a.lr)] if a.mode == 'pl' else [])
 opt = torch.optim.Adam(groups)
-optJ = torch.optim.Adam(Jp, lr=10*a.lr) if a.mode == 'sm_alt' else None
+optJ = torch.optim.Adam(Jp, lr=a.jlr_mult*a.lr) if a.mode == 'sm_alt' else None
 sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, a.epochs)
 hist = []; t0 = time.time()
 for ep in range(a.epochs):

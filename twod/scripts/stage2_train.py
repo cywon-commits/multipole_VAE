@@ -97,6 +97,34 @@ if a.ens == 'E1':
             # independent decoder: sites are conditionally independent vMF(h(z)); C(r>0)=0 by construction
             k = h.norm(dim=-1).mean().item()
             res['sample_C'] = dict(note='independent sites => C(r>0)=0; C(0)=<|delta|^2> ~ 2/kappa_dec', two_over_kappa=2/k)
+
+if a.ens == 'E2':
+    with torch.no_grad():
+        Sall = S
+        feats = []
+        for i in range(0, len(S), 128):
+            u = m.encode(S[i:i+128]); feats.append(torch.cat([u[0].flatten(1), u[1].flatten(1)], 1))
+        X = torch.cat(feats).numpy().astype(float)
+        hb = m.dec(*m.sample(*m.encode(S[va_idx]), stochastic=False), L, m.spur)
+        res['h_norm_mean_E2'] = float(hb.norm(dim=-1).mean())
+        res['cos_h_S_mean'] = float((torch.nn.functional.normalize(hb, dim=-1)*S[va_idx]).sum(-1).mean())
+    c4 = z['c4']; Qv = z['Q'].astype(float); sh = z['shift'].astype(float)
+    T = {'c4_onehot': np.eye(4)[c4], 'Q': Qv[:, None],
+         'shift_cs': np.stack([np.cos(2*np.pi*sh[:, 0]/L), np.sin(2*np.pi*sh[:, 0]/L), np.cos(2*np.pi*sh[:, 1]/L), np.sin(2*np.pi*sh[:, 1]/L)], 1)}
+    inner = (cid % 5 == 1) & ~val; fit = ~val & ~inner
+    def ridge(Xa, Ya, lam):
+        mu, sd = Xa.mean(0), Xa.std(0) + 1e-8; Xs = (Xa - mu)/sd
+        W = np.linalg.solve(Xs.T@Xs + lam*np.eye(Xs.shape[1]), Xs.T@(Ya - Ya.mean(0)))
+        return lambda Xb: ((Xb - mu)/sd)@W + Ya.mean(0)
+    def r2(Y, P): return float(1 - ((Y - P)**2).sum()/((Y - Y.mean(0))**2).sum())
+    pr = {}
+    for k, Y in T.items():
+        lams = [1., 10., 100., 1000.]
+        best = min(lams, key=lambda l: ((Y[inner] - ridge(X[fit], Y[fit], l)(X[inner]))**2).sum())
+        f = ridge(X[~val], Y[~val], best); P = f(X[val])
+        pr[k] = dict(lam=best, acc=float((P.argmax(1) == Y[val].argmax(1)).mean())) if k == 'c4_onehot' else dict(lam=best, R2_heldout=r2(Y[val], P))
+    # shift is only defined modulo the lattice period of the texture; also report baseline chance for c4 = 0.25
+    res['linear_probe_heldout_chains'] = pr
 torch.save(m.state_dict(), os.path.join(d, 'model.pt'))
 json.dump(res, open(os.path.join(d, 'result.json'), 'w'), indent=1, default=float)
 print(json.dumps({k: v for k, v in res.items() if k not in ('hist', 'args')}, indent=1, default=float))

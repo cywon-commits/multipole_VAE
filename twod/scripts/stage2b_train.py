@@ -54,9 +54,15 @@ opt = torch.optim.Adam([dict(params=mp, lr=a.lr)] + ([dict(params=Jp, lr=a.jlr_m
 optJ = torch.optim.Adam(Jp, lr=a.jlr_mult*a.lr) if a.mode == 'sm_alt' else None
 n_ep = a.max_epochs if a.converge else a.epochs
 sched = None if a.converge else torch.optim.lr_scheduler.CosineAnnealingLR(opt, a.epochs)
-hist = []; t0 = time.time(); stopped = None
+hist = []; t0 = time.time(); stopped = None; ep0 = 0
+ckpt = os.path.join(d, 'ckpt.pt')
+if os.path.exists(ckpt):                                   # resume after a container restart
+    c = torch.load(ckpt, weights_only=False); m.load_state_dict(c['m']); opt.load_state_dict(c['opt'])
+    if optJ is not None: optJ.load_state_dict(c['optJ'])
+    if sched: sched.load_state_dict(c['sched'])
+    hist, ep0 = c['hist'], c['ep']; print(name, 'resumed at epoch', ep0, flush=True)
 track = lambda h: h['J0'] if h['J0'] is not None else h['hnorm']
-for ep in range(n_ep):
+for ep in range(ep0, n_ep):
     perm = np.random.permutation(tr_idx); m.train(); acc = []
     for i in range(0, len(perm), a.bs):
         idx = perm[i:i+a.bs]; b = S[idx]; mk = make_mask(len(idx)) if a.mask_l else None
@@ -74,6 +80,9 @@ for ep in range(n_ep):
     hist.append(dict(ep=ep, rec=float(np.mean([x[0] for x in acc])), kl=float(np.mean([x[1] for x in acc])), val_rec=ov['rec'].item(),
                      hnorm=float(hv.norm(dim=-1).mean()), J0=None if m.J0 is None else m.J0.item(), D=None if m.D is None else m.D.item()))
     if ep % 5 == 0 or ep == n_ep - 1: print(name, {k: (round(v, 4) if isinstance(v, float) else v) for k, v in hist[-1].items()}, f'{time.time()-t0:.0f}s', flush=True)
+    if (ep + 1) % 5 == 0:
+        torch.save(dict(m=m.state_dict(), opt=opt.state_dict(), optJ=None if optJ is None else optJ.state_dict(),
+                        sched=None if sched is None else sched.state_dict(), hist=hist, ep=ep + 1), ckpt + '.tmp'); os.replace(ckpt + '.tmp', ckpt)
     if a.converge and ep + 1 >= max(a.min_epochs, 20):
         q = np.array([track(h) for h in hist]); w1, w0 = q[-10:].mean(), q[-20:-10].mean()
         if abs(w1 - w0)/abs(w1) < a.tol: stopped = ep + 1; break

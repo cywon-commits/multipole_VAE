@@ -1,0 +1,6 @@
+E2_U_m1_l8_r0.25_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_U_m1_l8_r0.5_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_U_m1_l8_r1.0_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 1.0 --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_U_m1_l8_r0.25_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_U_m1_l8_r0.5_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_U_m1_l8_r1.0_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 1.0 --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50

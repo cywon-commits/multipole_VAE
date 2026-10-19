@@ -1,0 +1,9 @@
+{
+ "note": "\u03c1* = r_tex/\u0394 computed BEFORE the U+M1 runs were trained/analysed. The K+M1 runs collapsed (KL\u22481e-4, measured \u0394=0), so r_tex and \u0394 cannot be measured from them; fallback: the E2 independent decoder at beta=0.01.",
+ "KL_total": 1641.090347290039,
+ "r_tex_per_site": 0.7122787965668572,
+ "val_rec_beta1_collapsed": 5155.1630859375,
+ "val_rec_beta0p01": 3702.400390625,
+ "Delta_per_site": 0.6305393642849393,
+ "rho_star": 1.1296341464336874
+}

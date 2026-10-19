@@ -30,7 +30,7 @@ S = torch.tensor(z['spins']); L = S.shape[1]; n_all = len(S)
 cid = z['chain_id']; val = (cid % 5 == 0)
 tr_idx, va_idx = np.where(~val)[0], np.where(val)[0]
 Bt = torch.tensor(z['B'], dtype=torch.float32) if 'B' in z else None
-if a.ens == 'E1':
+if a.ens.startswith('E1'):
     spur, dmi, kw = None, None, dict(global_pool=True, n_down=0)
 elif a.ens == 'E3':
     spur = [[0, 0, 1.], [1., 0, 0], [0, 1., 0]]; dmi = 'interfacial'; kw = dict(global_pool=True, n_down=2)
@@ -109,7 +109,7 @@ with torch.no_grad():
         # control: lock of unrelated pairs (shuffled samples) to show the chance level
         res['phase_lock_masked_chance'] = probes.phase_lock(Fd, np.roll(Fm, 1, axis=0), ks)
 
-if a.ens == 'E1':
+if a.ens.startswith('E1'):
     n = torch.tensor(z['field_dir'][va_idx], dtype=torch.float32)
     res['latent_l1_abs_cos_with_n'] = [(torch.nn.functional.normalize(mu1[:, k, :, 0, 0], dim=-1)*n).sum(-1).abs().mean().item() for k in range(a.K1)]
 

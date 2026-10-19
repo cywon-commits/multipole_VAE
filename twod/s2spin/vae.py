@@ -123,7 +123,9 @@ class SpinVAE(nn.Module):
         self.dec = Decoder(K1, K0, C, n_sp=n_sp + int(given_B), mask_ch=mask_ch)
         self.J0 = nn.Parameter(torch.tensor(float(J_init))) if coupled else None
         self.D = nn.Parameter(torch.tensor(0.0)) if (coupled and dmi) else None
-        if mask_mode == 'm2':                                       # separate couplings for masked sites
+        if mask_mode in ('m1hm', 'm2hm'):                          # separate uniform field for masked sites
+            self.hm = nn.Parameter(torch.tensor([0., 0., 1.5]))
+        if mask_mode in ('m2', 'm2hm'):                             # separate couplings for masked sites
             self.J0m = nn.Parameter(torch.tensor(float(J_init))); self.Dm = nn.Parameter(torch.tensor(0.0)) if dmi else None
 
     def dec_spur(self, B=None, n=None):
@@ -167,6 +169,11 @@ class SpinVAE(nn.Module):
             g_full = TL.effective_field(S, h, Jx_, Jy_)
             if self.mask_mode == 'm1':                                     # masked sites: independent vMF(h), no bonds
                 g_mask = h
+            elif self.mask_mode == 'm1hm':                                 # masked sites: independent vMF(h_m), h_m learnable and uniform
+                g_mask = self.hm.expand_as(h)
+            elif self.mask_mode == 'm2hm':                                 # own field h_m and own couplings, observed neighbours only
+                Jxm, Jym = bond_tensors(self.J0m, self.Dm if self.Dm is not None else 0., self.dmi, S.dtype)
+                g_mask = TL.effective_field(S*(1 - m).unsqueeze(-1), self.hm.view(1, 1, 1, 3), Jxm, Jym)
             elif self.mask_mode == 'm2':                                   # masked sites: own couplings, observed neighbours only
                 Jxm, Jym = bond_tensors(self.J0m, self.Dm if self.Dm is not None else 0., self.dmi, S.dtype)
                 g_mask = TL.effective_field(S*(1 - m).unsqueeze(-1), h, Jxm, Jym)

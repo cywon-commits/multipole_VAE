@@ -13,7 +13,10 @@ ap = argparse.ArgumentParser(description=__doc__)
 ap.add_argument('--ens', default='E1'); ap.add_argument('--mode', default='pl', choices=['indep', 'pl', 'sm_alt'])
 ap.add_argument('--given_B', action='store_true'); ap.add_argument('--mask_l', type=int, default=0)
 ap.add_argument('--mask_frac', type=float, default=0.25); ap.add_argument('--enc_mask', action='store_true')
-ap.add_argument('--mask_mode', default='shared', choices=['shared', 'm1', 'm2']); ap.add_argument('--warmup', type=int, default=0)
+ap.add_argument('--mask_mode', default='shared', choices=['shared', 'm1', 'm2', 'm1hm', 'm2hm']); ap.add_argument('--warmup', type=int, default=0)
+ap.add_argument('--beta_ramp', default=None, help='b0,b1,epochs: geometric ramp, then hold at b1')
+ap.add_argument('--init_from', default=None); ap.add_argument('--conv_on', default='J', choices=['J', 'obj', 'lossKL'])
+ap.add_argument('--save_at_beta', default=None, help='comma list: snapshot model when the ramp first reaches beta')
 ap.add_argument('--epochs', type=int, default=80); ap.add_argument('--converge', action='store_true')
 ap.add_argument('--min_epochs', type=int, default=30); ap.add_argument('--max_epochs', type=int, default=250)
 ap.add_argument('--tol', type=float, default=1e-3); ap.add_argument('--bs', type=int, default=64)
@@ -39,6 +42,10 @@ else:
     spur = [[0, 0, 1.], [1., 0, 0], [0, 1., 0]]; dmi = 'interfacial'; kw = dict(global_pool=False, n_down=3)
 m = SpinVAE(L, a.mode != 'indep', K1=a.K1, K0=a.K0, C=a.C, spur=spur, dmi=dmi, given_B=a.given_B, mask_ch=a.mask_l > 0, enc_mask=a.enc_mask, mask_mode=a.mask_mode, **kw)
 
+if a.init_from: m.load_state_dict(torch.load(a.init_from))
+ramp = [float(x) for x in a.beta_ramp.split(',')] if a.beta_ramp else None
+save_at = [float(x) for x in a.save_at_beta.split(',')] if a.save_at_beta else []
+
 def make_mask(n, gen=None):
     nb = L//a.mask_l
     blk = (torch.rand(n, nb, nb, generator=gen) < a.mask_frac).float()
@@ -49,7 +56,7 @@ vgen = torch.Generator().manual_seed(123)
 Mva = make_mask(len(va_idx), vgen) if a.mask_l else None
 kwargs_for = lambda idx, mk=None: dict(B=Bt[idx] if a.given_B else None, mask=mk)
 
-JN = ('J0', 'D', 'J0m', 'Dm')
+JN = ('J0', 'D', 'J0m', 'Dm', 'hm')
 Jp = [p for n_, p in m.named_parameters() if n_ in JN]
 mp = [p for n_, p in m.named_parameters() if n_ not in JN]
 opt = torch.optim.Adam([dict(params=mp, lr=a.lr)] + ([dict(params=Jp, lr=a.jlr_mult*a.lr)] if a.mode == 'pl' else []))
@@ -68,7 +75,7 @@ for ep in range(ep0, n_ep):
     perm = np.random.permutation(tr_idx); m.train(); acc = []
     for i in range(0, len(perm), a.bs):
         idx = perm[i:i+a.bs]; b = S[idx]; mk = make_mask(len(idx)) if a.mask_l else None
-        beta_ep = a.beta*min(1.0, ep/a.warmup) if a.warmup else a.beta
+        beta_ep = ramp[0]*(ramp[1]/ramp[0])**min(1.0, ep/ramp[2]) if ramp else (a.beta*min(1.0, ep/a.warmup) if a.warmup else a.beta)
         o = m.losses(b, beta_ep, a.free_bits, detach_J=(a.mode == 'sm_alt'), **kwargs_for(idx, mk))
         opt.zero_grad(); o['loss'].backward(); opt.step()
         if optJ is not None:
@@ -78,17 +85,22 @@ for ep in range(ep0, n_ep):
     if sched: sched.step()
     m.eval()
     with torch.no_grad():
-        ov = m.losses(S[va_idx], a.beta, a.free_bits, stochastic=False, **kwargs_for(va_idx, Mva))
+        ov = m.losses(S[va_idx], beta_ep, a.free_bits, stochastic=False, **kwargs_for(va_idx, Mva))
         mu1, mu0, _, _ = m.encode(S[va_idx], Mva if a.enc_mask else None); hv = m.decode(mu1, mu0, **{k: v for k, v in kwargs_for(va_idx, Mva).items()})
-    hist.append(dict(ep=ep, rec=float(np.mean([x[0] for x in acc])), kl=float(np.mean([x[1] for x in acc])), val_rec=ov['rec'].item(),
+    hist.append(dict(ep=ep, beta=beta_ep, kl_val=float(ov['kl'].sum()), obj_val=float(ov['loss']), rec=float(np.mean([x[0] for x in acc])), kl=float(np.mean([x[1] for x in acc])), val_rec=ov['rec'].item(),
                      hnorm=float(hv.norm(dim=-1).mean()), J0=None if m.J0 is None else m.J0.item(), D=None if m.D is None else m.D.item()))
     if ep % 5 == 0 or ep == n_ep - 1: print(name, {k: (round(v, 4) if isinstance(v, float) else v) for k, v in hist[-1].items()}, f'{time.time()-t0:.0f}s', flush=True)
+    for bs in save_at:
+        if beta_ep >= bs*0.999 and not os.path.exists(os.path.join(d, f'snap_beta{bs}.pt')): torch.save(m.state_dict(), os.path.join(d, f'snap_beta{bs}.pt'))
     if (ep + 1) % 5 == 0:
         torch.save(dict(m=m.state_dict(), opt=opt.state_dict(), optJ=None if optJ is None else optJ.state_dict(),
                         sched=None if sched is None else sched.state_dict(), hist=hist, ep=ep + 1), ckpt + '.tmp'); os.replace(ckpt + '.tmp', ckpt)
-    if a.converge and ep + 1 >= max(a.min_epochs, 20):
-        q = np.array([track(h) for h in hist]); w1, w0 = q[-10:].mean(), q[-20:-10].mean()
-        if abs(w1 - w0)/abs(w1) < a.tol: stopped = ep + 1; break
+    if a.converge and ep + 1 >= max(a.min_epochs, 20 + (int(ramp[2]) if ramp else 0)):
+        rel = lambda key: (lambda q: abs(q[-10:].mean() - q[-20:-10].mean())/max(abs(q[-10:].mean()), 1e-12))(np.array([h[key] for h in hist]))
+        if a.conv_on == 'J': ok = rel('J0' if hist[-1]['J0'] is not None else 'hnorm') < a.tol
+        elif a.conv_on == 'obj': ok = rel('obj_val') < a.tol
+        else: ok = rel('val_rec') < a.tol and rel('kl_val') < a.tol
+        if ok: stopped = ep + 1; break
 
 # ---------------- diagnostics ----------------
 m.eval(); res = dict(name=name, args=vars(a), hist=hist, epochs_run=len(hist), converged_at=stopped)
@@ -109,7 +121,9 @@ with torch.no_grad():
         res['delta_gain_per_masked_site'] = res['val_rec_masked_per_site_zero_z'] - res['val_rec_masked_per_site']
         res['r_tex_KL_per_masked_site'] = float(kl.sum())/(a.mask_frac*L*L)
         res['mask_fraction_realised'] = float(Mva.mean())
-        if m.mask_mode == 'm2': res['J0m'] = m.J0m.item(); res['Dm'] = None if m.Dm is None else m.Dm.item()
+        if m.mask_mode in ('m2', 'm2hm'): res['J0m'] = m.J0m.item(); res['Dm'] = None if m.Dm is None else m.Dm.item()
+        if m.mask_mode in ('m1hm', 'm2hm'): res['hm'] = m.hm.tolist()
+        hz_ = h[..., 2]; res['h_z_unmasked_mean'] = float((hz_*(1 - Mva)).sum()/max(float((1 - Mva).sum()), 1.0)); res['h_z_masked_mean'] = float((hz_*Mva).sum()/max(float(Mva.sum()), 1.0))
         # phase locking of decoded h_z with the data S_z inside the masked region (mean over the region removed)
         Sz = S[va_idx][..., 2].numpy().astype(float); hz = h[..., 2].numpy().astype(float); mk = Mva.numpy().astype(float)
         mean_in = lambda F: (F*mk).sum((1, 2), keepdims=True)/mk.sum((1, 2), keepdims=True)

@@ -1,0 +1,28 @@
+E2_hm_m1hm_l2_r0.25_s0|--ens E2 --mode pl --mask_l 2 --mask_frac 0.25 --mask_mode m1hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 0
+E2_hm_m1hm_l2_r0.5_s0|--ens E2 --mode pl --mask_l 2 --mask_frac 0.5 --mask_mode m1hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 0
+E2_hm_m1hm_l8_r0.25_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --mask_mode m1hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 0
+E2_hm_m1hm_l8_r0.5_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --mask_mode m1hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 0
+E2_hm_m2hm_l2_r0.25_s0|--ens E2 --mode pl --mask_l 2 --mask_frac 0.25 --mask_mode m2hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 0
+E2_hm_m2hm_l2_r0.5_s0|--ens E2 --mode pl --mask_l 2 --mask_frac 0.5 --mask_mode m2hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 0
+E2_hm_m2hm_l8_r0.25_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --mask_mode m2hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 0
+E2_hm_m2hm_l8_r0.5_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --mask_mode m2hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 0
+E2_hm_m1hm_l2_r0.25_s1|--ens E2 --mode pl --mask_l 2 --mask_frac 0.25 --mask_mode m1hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 1
+E2_hm_m1hm_l2_r0.5_s1|--ens E2 --mode pl --mask_l 2 --mask_frac 0.5 --mask_mode m1hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 1
+E2_hm_m1hm_l8_r0.25_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --mask_mode m1hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 1
+E2_hm_m1hm_l8_r0.5_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --mask_mode m1hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 1
+E2_hm_m2hm_l2_r0.25_s1|--ens E2 --mode pl --mask_l 2 --mask_frac 0.25 --mask_mode m2hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 1
+E2_hm_m2hm_l2_r0.5_s1|--ens E2 --mode pl --mask_l 2 --mask_frac 0.5 --mask_mode m2hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 1
+E2_hm_m2hm_l8_r0.25_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --mask_mode m2hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 1
+E2_hm_m2hm_l8_r0.5_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --mask_mode m2hm --enc_mask --warmup 20 --epochs 80 --jlr_mult 50 --seed 1
+E2_h0.01_s0|--ens E2 --mode indep --beta 0.01 --seed 0 --converge --max_epochs 200 --min_epochs 40 --conv_on obj
+E2_h0.01_s1|--ens E2 --mode indep --beta 0.01 --seed 1 --converge --max_epochs 200 --min_epochs 40 --conv_on obj
+E2_hmK_h0.01_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1hm --beta 0.01 --seed 0 --converge --max_epochs 200 --min_epochs 40 --conv_on obj --jlr_mult 50
+E2_hmK_h0.01_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1hm --beta 0.01 --seed 1 --converge --max_epochs 200 --min_epochs 40 --conv_on obj --jlr_mult 50
+E2_ramp_s0|--ens E2 --mode indep --seed 0 --init_from results/stage2b/E2_h0.01_s0/model.pt --beta_ramp 0.01,1,60 --converge --max_epochs 300 --conv_on obj --save_at_beta 0.03,0.1,0.3,1.0|E2_h0.01_s0
+E2_ramp_s1|--ens E2 --mode indep --seed 1 --init_from results/stage2b/E2_h0.01_s1/model.pt --beta_ramp 0.01,1,60 --converge --max_epochs 300 --conv_on obj --save_at_beta 0.03,0.1,0.3,1.0|E2_h0.01_s1
+E2_hmK_ramp_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1hm --seed 0 --init_from results/stage2b/E2_hmK_h0.01_s0/model.pt --beta_ramp 0.01,1,60 --converge --max_epochs 300 --conv_on obj --jlr_mult 50|E2_hmK_h0.01_s0
+E2_hmK_ramp_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1hm --seed 1 --init_from results/stage2b/E2_hmK_h0.01_s1/model.pt --beta_ramp 0.01,1,60 --converge --max_epochs 300 --conv_on obj --jlr_mult 50|E2_hmK_h0.01_s1
+E3_conv_pl_s0|--ens E3 --mode pl --seed 0 --converge --max_epochs 300 --min_epochs 30 --conv_on lossKL --jlr_mult 50
+E3_conv_sm_alt_s0|--ens E3 --mode sm_alt --seed 0 --converge --max_epochs 300 --min_epochs 30 --conv_on lossKL --jlr_mult 50
+E3_conv_pl_s1|--ens E3 --mode pl --seed 1 --converge --max_epochs 300 --min_epochs 30 --conv_on lossKL --jlr_mult 50
+E3_conv_sm_alt_s1|--ens E3 --mode sm_alt --seed 1 --converge --max_epochs 300 --min_epochs 30 --conv_on lossKL --jlr_mult 50

@@ -1,0 +1,4 @@
+E2_K1_h0.01_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1 --beta 0.01 --seed 0 --converge --max_epochs 200 --min_epochs 40 --conv_on obj --jlr_mult 50
+E2_K1_h0.01_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1 --beta 0.01 --seed 1 --converge --max_epochs 200 --min_epochs 40 --conv_on obj --jlr_mult 50
+E2_K1_ramp_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1 --seed 0 --init_from results/stage2b/E2_K1_h0.01_s0/model.pt --beta_ramp 0.01,1,60 --converge --max_epochs 300 --conv_on obj --jlr_mult 50|E2_K1_h0.01_s0
+E2_K1_ramp_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1 --seed 1 --init_from results/stage2b/E2_K1_h0.01_s1/model.pt --beta_ramp 0.01,1,60 --converge --max_epochs 300 --conv_on obj --jlr_mult 50|E2_K1_h0.01_s1

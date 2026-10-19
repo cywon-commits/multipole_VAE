@@ -12,7 +12,8 @@ from s2spin.vae import SpinVAE             # noqa
 ap = argparse.ArgumentParser(description=__doc__)
 ap.add_argument('--ens', default='E1'); ap.add_argument('--mode', default='pl', choices=['indep', 'pl', 'sm_alt'])
 ap.add_argument('--given_B', action='store_true'); ap.add_argument('--mask_l', type=int, default=0)
-ap.add_argument('--mask_frac', type=float, default=0.25)
+ap.add_argument('--mask_frac', type=float, default=0.25); ap.add_argument('--enc_mask', action='store_true')
+ap.add_argument('--mask_mode', default='shared', choices=['shared', 'm1', 'm2']); ap.add_argument('--warmup', type=int, default=0)
 ap.add_argument('--epochs', type=int, default=80); ap.add_argument('--converge', action='store_true')
 ap.add_argument('--min_epochs', type=int, default=30); ap.add_argument('--max_epochs', type=int, default=250)
 ap.add_argument('--tol', type=float, default=1e-3); ap.add_argument('--bs', type=int, default=64)
@@ -36,7 +37,7 @@ elif a.ens == 'E3':
     spur = [[0, 0, 1.], [1., 0, 0], [0, 1., 0]]; dmi = 'interfacial'; kw = dict(global_pool=True, n_down=2)
 else:
     spur = [[0, 0, 1.], [1., 0, 0], [0, 1., 0]]; dmi = 'interfacial'; kw = dict(global_pool=False, n_down=3)
-m = SpinVAE(L, a.mode != 'indep', K1=a.K1, K0=a.K0, C=a.C, spur=spur, dmi=dmi, given_B=a.given_B, mask_ch=a.mask_l > 0, **kw)
+m = SpinVAE(L, a.mode != 'indep', K1=a.K1, K0=a.K0, C=a.C, spur=spur, dmi=dmi, given_B=a.given_B, mask_ch=a.mask_l > 0, enc_mask=a.enc_mask, mask_mode=a.mask_mode, **kw)
 
 def make_mask(n, gen=None):
     nb = L//a.mask_l
@@ -48,8 +49,9 @@ vgen = torch.Generator().manual_seed(123)
 Mva = make_mask(len(va_idx), vgen) if a.mask_l else None
 kwargs_for = lambda idx, mk=None: dict(B=Bt[idx] if a.given_B else None, mask=mk)
 
-Jp = [p for n_, p in m.named_parameters() if n_ in ('J0', 'D')]
-mp = [p for n_, p in m.named_parameters() if n_ not in ('J0', 'D')]
+JN = ('J0', 'D', 'J0m', 'Dm')
+Jp = [p for n_, p in m.named_parameters() if n_ in JN]
+mp = [p for n_, p in m.named_parameters() if n_ not in JN]
 opt = torch.optim.Adam([dict(params=mp, lr=a.lr)] + ([dict(params=Jp, lr=a.jlr_mult*a.lr)] if a.mode == 'pl' else []))
 optJ = torch.optim.Adam(Jp, lr=a.jlr_mult*a.lr) if a.mode == 'sm_alt' else None
 n_ep = a.max_epochs if a.converge else a.epochs
@@ -66,7 +68,8 @@ for ep in range(ep0, n_ep):
     perm = np.random.permutation(tr_idx); m.train(); acc = []
     for i in range(0, len(perm), a.bs):
         idx = perm[i:i+a.bs]; b = S[idx]; mk = make_mask(len(idx)) if a.mask_l else None
-        o = m.losses(b, a.beta, a.free_bits, detach_J=(a.mode == 'sm_alt'), **kwargs_for(idx, mk))
+        beta_ep = a.beta*min(1.0, ep/a.warmup) if a.warmup else a.beta
+        o = m.losses(b, beta_ep, a.free_bits, detach_J=(a.mode == 'sm_alt'), **kwargs_for(idx, mk))
         opt.zero_grad(); o['loss'].backward(); opt.step()
         if optJ is not None:
             sm = m.losses(b, a.beta, a.free_bits, detach_J=False, **kwargs_for(idx, mk))['sm']
@@ -76,7 +79,7 @@ for ep in range(ep0, n_ep):
     m.eval()
     with torch.no_grad():
         ov = m.losses(S[va_idx], a.beta, a.free_bits, stochastic=False, **kwargs_for(va_idx, Mva))
-        mu1, mu0, _, _ = m.encode(S[va_idx]); hv = m.decode(mu1, mu0, **{k: v for k, v in kwargs_for(va_idx, Mva).items()})
+        mu1, mu0, _, _ = m.encode(S[va_idx], Mva if a.enc_mask else None); hv = m.decode(mu1, mu0, **{k: v for k, v in kwargs_for(va_idx, Mva).items()})
     hist.append(dict(ep=ep, rec=float(np.mean([x[0] for x in acc])), kl=float(np.mean([x[1] for x in acc])), val_rec=ov['rec'].item(),
                      hnorm=float(hv.norm(dim=-1).mean()), J0=None if m.J0 is None else m.J0.item(), D=None if m.D is None else m.D.item()))
     if ep % 5 == 0 or ep == n_ep - 1: print(name, {k: (round(v, 4) if isinstance(v, float) else v) for k, v in hist[-1].items()}, f'{time.time()-t0:.0f}s', flush=True)
@@ -90,7 +93,7 @@ for ep in range(ep0, n_ep):
 # ---------------- diagnostics ----------------
 m.eval(); res = dict(name=name, args=vars(a), hist=hist, epochs_run=len(hist), converged_at=stopped)
 with torch.no_grad():
-    mu1, mu0, lv0, lv1 = m.encode(S[va_idx])
+    mu1, mu0, lv0, lv1 = m.encode(S[va_idx], Mva if a.enc_mask else None)
     kl = m.kl_per_dim(mu1, mu0, lv0, lv1)
     res['kl_per_dim_val'] = kl.tolist(); res['kl_total'] = float(kl.sum())          # order: K0 scalars, K1 vectors
     h = m.decode(mu1, mu0, **kwargs_for(va_idx, Mva))
@@ -100,6 +103,13 @@ with torch.no_grad():
         o = m.losses(S[va_idx], a.beta, a.free_bits, stochastic=False, **kwargs_for(va_idx, Mva))
         res['val_rec_masked_per_site'] = float(o['rec_masked'])/float(Mva.sum(dim=(1, 2)).mean())
         res['val_rec_unmasked_per_site'] = float(o['rec_unmasked'])/float((1 - Mva).sum(dim=(1, 2)).mean())
+        o0 = m.losses(S[va_idx], a.beta, a.free_bits, stochastic=False, zero_z=True, **kwargs_for(va_idx, Mva))
+        nm = float(Mva.sum(dim=(1, 2)).mean())
+        res['val_rec_masked_per_site_zero_z'] = float(o0['rec_masked'])/nm
+        res['delta_gain_per_masked_site'] = res['val_rec_masked_per_site_zero_z'] - res['val_rec_masked_per_site']
+        res['r_tex_KL_per_masked_site'] = float(kl.sum())/(a.mask_frac*L*L)
+        res['mask_fraction_realised'] = float(Mva.mean())
+        if m.mask_mode == 'm2': res['J0m'] = m.J0m.item(); res['Dm'] = None if m.Dm is None else m.Dm.item()
         # phase locking of decoded h_z with the data S_z inside the masked region (mean over the region removed)
         Sz = S[va_idx][..., 2].numpy().astype(float); hz = h[..., 2].numpy().astype(float); mk = Mva.numpy().astype(float)
         mean_in = lambda F: (F*mk).sum((1, 2), keepdims=True)/mk.sum((1, 2), keepdims=True)

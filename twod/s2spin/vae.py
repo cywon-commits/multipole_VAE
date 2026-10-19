@@ -45,21 +45,22 @@ def spurion_channels(spur, B, H, W, dtype, device):
     return sp[..., None, None].expand(-1, -1, -1, H, W)
 
 class Encoder(nn.Module):
-    def __init__(self, K1=2, K0=2, C=8, n_layers=3, n_down=0, n_sp=0, global_pool=True):
+    def __init__(self, K1=2, K0=2, C=8, n_layers=3, n_down=0, n_sp=0, global_pool=True, mask_in=False):
         super().__init__()
-        self.n_sp, self.n_down, self.global_pool, self.K1, self.K0 = n_sp, n_down, global_pool, K1, K0
-        cv, cs = 1 + n_sp, 1
+        self.n_sp, self.n_down, self.global_pool, self.K1, self.K0, self.mask_in = n_sp, n_down, global_pool, K1, K0, mask_in
+        cv, cs = 1 + n_sp, 1 + int(mask_in)
         self.layers = nn.ModuleList()
         for i in range(n_layers):
             self.layers.append(VNConv(cv, cs, C, C)); cv, cs = C, C
         self.mu1 = nn.Conv2d(C, K1, 1, bias=False)
         self.head = nn.Conv2d(C + C, 2*K0 + K1, 1)          # from [s, |V|] -> mu0, logvar0, logvar1
 
-    def forward(self, S, spur=None):
+    def forward(self, S, spur=None, mask=None):
         B, H, W, _ = S.shape
         V = S.permute(0, 3, 1, 2).unsqueeze(1)
         if self.n_sp: V = torch.cat([V, spurion_channels(spur, B, H, W, S.dtype, S.device)], 1)
         s = torch.ones(B, 1, H, W, dtype=S.dtype, device=S.device)
+        if self.mask_in: s = torch.cat([s, mask.to(S.dtype).unsqueeze(1)], 1)
         for i, l in enumerate(self.layers):
             V, s = l(V, s)
             if i < self.n_down: V, s = pool(V, s)
@@ -111,16 +112,19 @@ def bond_tensors(J0, D, kind, dtype=torch.float32):
 class SpinVAE(nn.Module):
     """coupled=False: independent (local-field) decoder. coupled=True: + global J0 (and D if dmi given)."""
     def __init__(self, L, coupled, K1=2, K0=2, C=8, n_down=0, global_pool=True, spur=None, dmi=None, J_init=1.0,
-                 given_B=False, mask_ch=False):
+                 given_B=False, mask_ch=False, enc_mask=False, mask_mode='shared'):
         super().__init__()
         self.L, self.coupled, self.dmi = L, coupled, dmi
         self.spur = None if spur is None else torch.as_tensor(spur, dtype=torch.float32)
         n_sp = 0 if spur is None else len(spur)
-        self.enc = Encoder(K1, K0, C, n_down=n_down, n_sp=n_sp, global_pool=global_pool)
+        self.enc = Encoder(K1, K0, C, n_down=n_down, n_sp=n_sp, global_pool=global_pool, mask_in=enc_mask)
+        self.enc_mask, self.mask_mode = enc_mask, mask_mode
         self.given_B, self.mask_ch = given_B, mask_ch
         self.dec = Decoder(K1, K0, C, n_sp=n_sp + int(given_B), mask_ch=mask_ch)
         self.J0 = nn.Parameter(torch.tensor(float(J_init))) if coupled else None
         self.D = nn.Parameter(torch.tensor(0.0)) if (coupled and dmi) else None
+        if mask_mode == 'm2':                                       # separate couplings for masked sites
+            self.J0m = nn.Parameter(torch.tensor(float(J_init))); self.Dm = nn.Parameter(torch.tensor(0.0)) if dmi else None
 
     def dec_spur(self, B=None, n=None):
         """Decoder spurions: the fixed ones, plus (given_B) the per-sample field vector B z_hat."""
@@ -132,8 +136,8 @@ class SpinVAE(nn.Module):
     def decode(self, z1, z0, B=None, mask=None):
         return self.dec(z1, z0, self.L, self.dec_spur(B, z1.shape[0]), mask)
 
-    def encode(self, S):
-        return self.enc(S, self.spur)
+    def encode(self, S, mask=None):
+        return self.enc(S, self.spur, mask)
 
     def sample(self, mu1, mu0, lv0, lv1, stochastic=True):
         if not stochastic: return mu1, mu0
@@ -149,9 +153,10 @@ class SpinVAE(nn.Module):
         k1 = 0.5*((mu1**2).sum(2) + 3*lv1.exp() - 3 - 3*lv1)
         return torch.cat([k0.sum((-1, -2)), k1.sum((-1, -2))], 1).mean(0)
 
-    def losses(self, S, beta=1.0, free_bits=0.0, stochastic=True, detach_J=False, B=None, mask=None):
-        mu1, mu0, lv0, lv1 = self.encode(S)
+    def losses(self, S, beta=1.0, free_bits=0.0, stochastic=True, detach_J=False, B=None, mask=None, zero_z=False):
+        mu1, mu0, lv0, lv1 = self.encode(S, mask if self.enc_mask else None)
         z1, z0 = self.sample(mu1, mu0, lv0, lv1, stochastic)
+        if zero_z: z1, z0 = torch.zeros_like(z1), torch.zeros_like(z0)
         h = self.decode(z1, z0, B, mask)
         Jx, Jy = self.bonds(S.dtype)
         rec_m = rec_u = None
@@ -160,7 +165,13 @@ class SpinVAE(nn.Module):
             Jx_, Jy_ = (Jx.detach(), Jy.detach()) if detach_J else (Jx, Jy)
             m = mask.to(S.dtype)
             g_full = TL.effective_field(S, h, Jx_, Jy_)
-            g_mask = TL.effective_field(S*(1 - m).unsqueeze(-1), h, Jx_, Jy_)      # h + bonds from unmasked neighbours
+            if self.mask_mode == 'm1':                                     # masked sites: independent vMF(h), no bonds
+                g_mask = h
+            elif self.mask_mode == 'm2':                                   # masked sites: own couplings, observed neighbours only
+                Jxm, Jym = bond_tensors(self.J0m, self.Dm if self.Dm is not None else 0., self.dmi, S.dtype)
+                g_mask = TL.effective_field(S*(1 - m).unsqueeze(-1), h, Jxm, Jym)
+            else:
+                g_mask = TL.effective_field(S*(1 - m).unsqueeze(-1), h, Jx_, Jy_)      # h + bonds from unmasked neighbours
             g = torch.where(m.unsqueeze(-1) > 0, g_mask, g_full)
             nll = TL.vmf_nll(S, g)
             rec = nll.sum((-1, -2)); rec_m = (nll*m).sum((-1, -2)); rec_u = (nll*(1 - m)).sum((-1, -2))

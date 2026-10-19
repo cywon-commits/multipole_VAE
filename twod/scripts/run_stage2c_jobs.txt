@@ -1,0 +1,26 @@
+E1L64_pl_s0|--ens E1L64 --mode pl --seed 0 --converge --max_epochs 300
+E1L64_pl_s1|--ens E1L64 --mode pl --seed 1 --converge --max_epochs 300
+E2_K_m1_l2_r0.25_s0|--ens E2 --mode pl --mask_l 2 --mask_frac 0.25 --enc_mask --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m1_l2_r0.5_s0|--ens E2 --mode pl --mask_l 2 --mask_frac 0.5 --enc_mask --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m1_l4_r0.25_s0|--ens E2 --mode pl --mask_l 4 --mask_frac 0.25 --enc_mask --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m1_l4_r0.5_s0|--ens E2 --mode pl --mask_l 4 --mask_frac 0.5 --enc_mask --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m1_l8_r0.25_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --enc_mask --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m1_l8_r0.5_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m1_l16_r0.25_s0|--ens E2 --mode pl --mask_l 16 --mask_frac 0.25 --enc_mask --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m1_l16_r0.5_s0|--ens E2 --mode pl --mask_l 16 --mask_frac 0.5 --enc_mask --mask_mode m1 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m1_l2_r0.25_s1|--ens E2 --mode pl --mask_l 2 --mask_frac 0.25 --enc_mask --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_K_m1_l2_r0.5_s1|--ens E2 --mode pl --mask_l 2 --mask_frac 0.5 --enc_mask --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_K_m1_l4_r0.25_s1|--ens E2 --mode pl --mask_l 4 --mask_frac 0.25 --enc_mask --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_K_m1_l4_r0.5_s1|--ens E2 --mode pl --mask_l 4 --mask_frac 0.5 --enc_mask --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_K_m1_l8_r0.25_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --enc_mask --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_K_m1_l8_r0.5_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.5 --enc_mask --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_K_m1_l16_r0.25_s1|--ens E2 --mode pl --mask_l 16 --mask_frac 0.25 --enc_mask --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_K_m1_l16_r0.5_s1|--ens E2 --mode pl --mask_l 16 --mask_frac 0.5 --enc_mask --mask_mode m1 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_K_m2_l2_r0.25_s0|--ens E2 --mode pl --mask_l 2 --mask_frac 0.25 --enc_mask --mask_mode m2 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m2_l8_r0.25_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --enc_mask --mask_mode m2 --warmup 20 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m2_l2_r0.25_s1|--ens E2 --mode pl --mask_l 2 --mask_frac 0.25 --enc_mask --mask_mode m2 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_K_m2_l8_r0.25_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --enc_mask --mask_mode m2 --warmup 20 --seed 1 --epochs 80 --jlr_mult 50
+E2_indep_warm_s0|--ens E2 --mode indep --warmup 20 --seed 0 --epochs 80
+E2_indep_warm_s1|--ens E2 --mode indep --warmup 20 --seed 1 --epochs 80
+E2_K_m1_l8_r0.25_nowarm_s0|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --enc_mask --mask_mode m1 --seed 0 --epochs 80 --jlr_mult 50
+E2_K_m1_l8_r0.25_nowarm_s1|--ens E2 --mode pl --mask_l 8 --mask_frac 0.25 --enc_mask --mask_mode m1 --seed 1 --epochs 80 --jlr_mult 50

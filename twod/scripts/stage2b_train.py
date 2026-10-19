@@ -102,7 +102,7 @@ with torch.no_grad():
     if m.coupled and a.mask_l:
         o = m.losses(S[va_idx], a.beta, a.free_bits, stochastic=False, **kwargs_for(va_idx, Mva))
         res['val_rec_masked_per_site'] = float(o['rec_masked'])/float(Mva.sum(dim=(1, 2)).mean())
-        res['val_rec_unmasked_per_site'] = float(o['rec_unmasked'])/float((1 - Mva).sum(dim=(1, 2)).mean())
+        res['val_rec_unmasked_per_site'] = float(o['rec_unmasked'])/max(float((1 - Mva).sum(dim=(1, 2)).mean()), 1.0)
         o0 = m.losses(S[va_idx], a.beta, a.free_bits, stochastic=False, zero_z=True, **kwargs_for(va_idx, Mva))
         nm = float(Mva.sum(dim=(1, 2)).mean())
         res['val_rec_masked_per_site_zero_z'] = float(o0['rec_masked'])/nm

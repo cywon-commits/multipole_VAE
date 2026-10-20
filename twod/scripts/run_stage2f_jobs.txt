@@ -1,0 +1,12 @@
+E2_F_b12.6_s0|--ens E2 --mode indep --beta 12.6000 --seed 0 --init_from results/stage2b/E2_A2_b10_s0/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_A2_b10_s0
+E2_F_b12.6_s1|--ens E2 --mode indep --beta 12.6000 --seed 1 --init_from results/stage2b/E2_A2_b10_s1/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_A2_b10_s1
+E2_F_b15.9_s0|--ens E2 --mode indep --beta 15.8760 --seed 0 --init_from results/stage2b/E2_F_b12.6_s0/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_F_b12.6_s0
+E2_F_b15.9_s1|--ens E2 --mode indep --beta 15.8760 --seed 1 --init_from results/stage2b/E2_F_b12.6_s1/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_F_b12.6_s1
+E2_F_b20.0_s0|--ens E2 --mode indep --beta 20.0038 --seed 0 --init_from results/stage2b/E2_F_b15.9_s0/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_F_b15.9_s0
+E2_F_b20.0_s1|--ens E2 --mode indep --beta 20.0038 --seed 1 --init_from results/stage2b/E2_F_b15.9_s1/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_F_b15.9_s1
+E2_F_b25.2_s0|--ens E2 --mode indep --beta 25.2047 --seed 0 --init_from results/stage2b/E2_F_b20.0_s0/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_F_b20.0_s0
+E2_F_b25.2_s1|--ens E2 --mode indep --beta 25.2047 --seed 1 --init_from results/stage2b/E2_F_b20.0_s1/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_F_b20.0_s1
+E2_F_b31.8_s0|--ens E2 --mode indep --beta 31.7580 --seed 0 --init_from results/stage2b/E2_F_b25.2_s0/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_F_b25.2_s0
+E2_F_b31.8_s1|--ens E2 --mode indep --beta 31.7580 --seed 1 --init_from results/stage2b/E2_F_b25.2_s1/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_F_b25.2_s1
+E2_FC_b31.8_s0|--ens E2 --mode indep --beta 31.7580 --lr 0.000667 --seed 0 --init_from results/stage2b/E2_A2_b10_s0/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_A2_b10_s0
+E2_FC_b31.8_s1|--ens E2 --mode indep --beta 31.7580 --lr 0.000667 --seed 1 --init_from results/stage2b/E2_A2_b10_s1/model.pt --converge --max_epochs 150 --min_epochs 40 --conv_on obj|E2_A2_b10_s1

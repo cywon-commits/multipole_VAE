@@ -1,8 +1,8 @@
 """Re-run of the 1D reference chains (reference_1d/) with fixed seeds -> CSVs for Fig. 2a/2c, Fig. 3b, Fig. S4 and Table 1.
 The 1D results of the earlier chat were not stored in the repository, so they are regenerated here:
   exact chain (open, N=100, J = 0.5, 2, 5): correlation <S_i.S_{i+r}> vs the Fisher exact L(J)^r; SM/PL estimates with jackknife errors.
-  DMI chain (N=100, J = 1): cases A: D=0.3 z, B: D=0.6 z, C: D=0.6 (1,1,1)/sqrt3 (the original case definitions are not in the repository;
-      these are my choice), plus a pitch-identity grid; SM/PL estimates (12 parameters) with jackknife errors.
+  DMI chain (N=100, open, no field, bond direction x): cases A: J=2, D=(0,1,0); B: J=2, D=(1,0,0); C: J=1, D=(0,0.3,0) (definitions of fix-1 request),
+      plus a pitch-identity grid (D along z, J=1) and 8 independent MC runs of case A; SM/PL estimates (12 parameters) with jackknife errors.
   external-field chain (N=100, kappa=10, J = 1, 2, 5, 10, 20): transverse correlation vs lattice Gaussian, kappa_ind vs sqrt(kappa(kappa+4J)),
       and replicated 12-parameter fits for the collinear flat direction."""
 import sys, time
@@ -33,7 +33,7 @@ for J in (0.5, 2.0, 5.0):
     print('exact', J, time.time() - t0, flush=True)
 save_csv('1d_exact_corr.csv', pd.DataFrame(rows_c)); save_csv('1d_exact_est.csv', pd.DataFrame(rows_e))
 # ---------------- DMI chain ----------------
-cases = {'A': (1.0, np.array([0, 0, 0.3])), 'B': (1.0, np.array([0, 0, 0.6])), 'C': (1.0, 0.6*np.ones(3)/np.sqrt(3))}
+cases = {'A': (2.0, np.array([0, 1.0, 0])), 'B': (2.0, np.array([1.0, 0, 0])), 'C': (1.0, np.array([0, 0.3, 0]))}
 rows_d, rows_p = [], []
 def pitch(S, D):
     e = D/np.linalg.norm(D); Sp = S - (S@e)[..., None]*e
@@ -49,6 +49,11 @@ for name, (J, D) in cases.items():
 for Dm in (0.1, 0.3, 0.6, 1.0, 1.5):                   # pitch identity grid (D along z)
     S = run_dmi(1.0, np.array([0, 0, Dm]), N=100, chains=200, therm=300, nsamp=4, gap=50, seed=4); num, den = pitch(S, np.array([0, 0, Dm]))
     rows_p.append(dict(case=f'grid', J=1.0, D=Dm, measured=num/den, expected=Dm, kind='grid', cond=np.nan))
+rows_8 = []
+for rep in range(8):                                       # 8 independent MC runs of case A (D_y estimate, pitch identity)
+    S = run_dmi(2.0, np.array([0, 1.0, 0]), N=100, chains=200, therm=300, nsamp=4, gap=50, seed=200 + rep); th = H1.score_matching(S, allp); num, den = pitch(S, np.array([0, 1.0, 0]))
+    rows_8.append(dict(rep=rep, J0=float(th[0]), D_dir=float(th[2]), pitch=num/den))
+save_csv('1d_dmi_caseA_8mc.csv', pd.DataFrame(rows_8))
 save_csv('1d_dmi_est.csv', pd.DataFrame(rows_d)); save_csv('1d_dmi_pitch.csv', pd.DataFrame(rows_p))
 # ---------------- external-field chain ----------------
 kap = 10.0; rows_f, rows_k, rows_fl = [], [], []

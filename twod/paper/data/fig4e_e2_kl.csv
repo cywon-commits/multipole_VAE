@@ -1,0 +1,5 @@
+label,decoder,seed,KL
+"coupled (PL) beta=1, E2",PL,0,1.3962198408989934e-05
+"coupled (SM) beta=1, E2",SM,0,1.8828764382305962e-05
+"independent, continued, beta=1",indep,0,493.1590576171875
+"independent, continued, beta=1",indep,1,517.0571899414062

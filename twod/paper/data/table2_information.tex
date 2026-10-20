@@ -1,0 +1,23 @@
+\begin{table}[t]
+\centering
+\small
+\caption{Information content of the latent and collapse (seeds as stated).}
+\label{tab:information}
+\begin{tabular}{llll}
+\toprule
+block & quantity & observed & prediction \\
+\midrule
+E1 & pl KL [nat] & 9.94 (9.56-10.14, 3 seeds) & 9.95 \\
+E1 & indep KL [nat] & 12.96 (12.89-13.08, 3 seeds) & 13.01 \\
+E3 & E3\_conv\_pl\_s0: KL, R2 sampled/mean, I\_eff/I\_PL & 1.30, 0.897/0.990, 0.87 & KL$>$=1.24 (PL CR bound), toy 1.37; R2 0.918/0.993 (l=0); I\_eff/I\_PL 0.8 (PL) \\
+E3 & E3\_conv\_pl\_s1: KL, R2 sampled/mean, I\_eff/I\_PL & 1.29, 0.897/0.990, 0.85 & KL$>$=1.24 (PL CR bound), toy 1.37; R2 0.918/0.993 (l=0); I\_eff/I\_PL 0.8 (PL) \\
+E3 & E3\_conv\_sm\_alt\_s0: KL, R2 sampled/mean, I\_eff/I\_PL & 1.39, 0.912/0.991, 0.80 & KL$>$=1.24 (PL CR bound), toy 1.37; R2 0.918/0.993 (l=0); I\_eff/I\_PL 1.0 (SM, predicted) \\
+E3 & E3\_conv\_sm\_alt\_s1: KL, R2 sampled/mean, I\_eff/I\_PL & 1.50, 0.818/0.990, n/a & KL$>$=1.24 (PL CR bound), toy 1.66; R2 0.854 (l=1, SM s1) \\
+E3 & control (true B given): KL & 0.000, 0.000 & 0 \\
+E2 & coupled decoder KL (beta=1) & 1.4e-05 (collapsed, Markov theorem) & 0 \\
+E2 & independent continued KL (beta=1), 2 seeds & 493, 517 & $>$ 0 (collapse is a trap) \\
+collapse & tangent lower bound beta\_lb (sampled z), seeds 0/1 & 38.5 / 35.0 & $>$= 24.3 (from beta$<$=10 states, mean z) \\
+collapse & transition location & beta\_c $>$ 31.75 (seed 0, 1; B-2); fine-grid linear zero 28.6 (window dependent 26-34) & first-order jump (toy), not observed \\
+\bottomrule
+\end{tabular}
+\end{table}

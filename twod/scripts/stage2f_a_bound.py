@@ -24,7 +24,7 @@ res = dict(states={}, Dc={})
 for s in (0, 1):
     res['Dc'][s] = state(f'E2_B2s_b1_s{s}')
     rows = [state(src(b, s)) for b in (0.01, 0.03, 0.1, 0.3, 1, 3, 10)]
-    rows += [state(os.path.basename(f.rsplit('/', 1)[0])) for f in sorted(glob.glob(f'{out}/stage2b/E2_F_b*_s{s}/result.json'), key=lambda x: float(x.split('_b')[1].split('_')[0]))
+    rows += [state(os.path.basename(f.rsplit('/', 1)[0])) for pat in ('E2_F_b*', 'E2_FC_b*', 'E2_FB2_b*') for f in sorted(glob.glob(f'{out}/stage2b/{pat}_s{s}/result.json'), key=lambda x: float(x.split('_b')[1].split('_')[0]))
              if json.load(open(f))['kl_total'] > 0.5]
     res['states'][s] = rows
 for s in (0, 1):
@@ -54,7 +54,7 @@ for k, s in enumerate((0, 1)):
     st = res['states'][s]; Dc = res['Dc'][s]['D_samp']
     ax[k].plot([r['R'] for r in st], [r['D_samp'] for r in st], 'o-', ms=4); ax[k].plot([0], [Dc], 'r*', ms=10, label='collapsed (0, D_c)')
     for r in st: ax[k].annotate(f"{r['beta']:.3g}", (r['R'], r['D_samp']), fontsize=6)
-    bst = max(st, key=lambda r: r['ratio_samp']); xs = np.array([0, max(r['R'] for r in st)])
+    bst = max(st, key=lambda r: r['ratio_samp']); xs = np.array([0, 110.0])
     ax[k].plot(xs, Dc - bst['ratio_samp']*xs, 'k--', lw=0.8, label=f"tangent line, slope -beta_lb={bst['ratio_samp']:.1f}")
-    ax[k].set_xlabel('R = KL [nat]'); ax[k].set_ylabel('D (sampled-z reconstruction)'); ax[k].set_title(f'seed {s}'); ax[k].legend(fontsize=7)
+    ax[k].set_xlim(0, 110); ax[k].set_ylim(3000, 5300); ax[k].set_xlabel('R = KL [nat] (zoom to R < 110)'); ax[k].set_ylabel('D (sampled-z reconstruction)'); ax[k].set_title(f'seed {s}'); ax[k].legend(fontsize=7)
 fig.tight_layout(); fig.savefig(f'{out}/fig/stage2f_b.png', dpi=130)
